@@ -30,6 +30,8 @@ data_tb <-  #fake data
 
 mapWorld <-  #world map, x-coordinate=longitude, y-coordinate=latitude
   borders("world", colour="gray80", fill="gray80")
+
+head(data_tb)
 ```
 
 # check points
@@ -49,6 +51,8 @@ GPS_points <- #all points
   column_to_rownames("sample") %>%
   select(Long, Lat)
 
+head(GPS_points)
+
 mdist <- #distance matrix of points
   distm(GPS_points)
 
@@ -60,11 +64,15 @@ GPS_points_tb <- #assign points to groups
   rownames_to_column("sample") %>%
   mutate(group=cutree(hc, k=k)) %>%
   mutate(group=as.factor(group))
+
+head(GPS_points_tb)
   
 centroid_tb <- #centroid of groups
   GPS_points_tb %>%
   group_by(group) %>%
   summarise(mean_long=mean(Long), mean_lat=mean(Lat))
+
+head(centroid_tb)
 ```
 
 # check group centroids
@@ -87,12 +95,16 @@ cluster_sum <-
   summarise(n=n()) %>%
   ungroup()
 
+head(cluster_sum)
+
 cluster_sum_wide <-
   cluster_sum %>%
   pivot_wider(values_from=`n`, names_from = status, values_fill=0) %>%
   rowwise() %>%
   mutate(total=sum(c_across(-group))) %>%
   left_join(centroid_tb)
+
+head(cluster_sum_wide)
 ```
 
 # circle plot

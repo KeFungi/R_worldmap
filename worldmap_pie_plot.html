@@ -395,7 +395,18 @@ data_tb &lt;-  #fake data
          )
 
 mapWorld &lt;-  #world map, x-coordinate=longitude, y-coordinate=latitude
-  borders(&quot;world&quot;, colour=&quot;gray80&quot;, fill=&quot;gray80&quot;)</code></pre>
+  borders(&quot;world&quot;, colour=&quot;gray80&quot;, fill=&quot;gray80&quot;)
+
+head(data_tb)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   sample   Long   Lat status    
+##   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;     
+## 1 s1      114.  -54.9 incomplete
+## 2 s2       53.0 -38.7 incomplete
+## 3 s3     -137.   43.6 complete  
+## 4 s4       15.8 -23.6 incomplete
+## 5 s5     -113.   23.1 complete  
+## 6 s6       48.9  13.8 complete</code></pre>
 </div>
 <div id="check-points" class="section level1">
 <h1>check points</h1>
@@ -414,7 +425,15 @@ GPS_points &lt;- #all points
   column_to_rownames(&quot;sample&quot;) %&gt;%
   select(Long, Lat)
 
-mdist &lt;- #distance matrix of points
+head(GPS_points)</code></pre>
+<pre><code>##          Long       Lat
+## s1  113.75196 -54.89683
+## s2   53.01336 -38.67264
+## s3 -136.68171  43.58928
+## s4   15.76806 -23.55861
+## s5 -113.49720  23.14197
+## s6   48.88470  13.81575</code></pre>
+<pre class="r"><code>mdist &lt;- #distance matrix of points
   distm(GPS_points)
 
 hc &lt;- #hierachial clustering
@@ -425,12 +444,29 @@ GPS_points_tb &lt;- #assign points to groups
   rownames_to_column(&quot;sample&quot;) %&gt;%
   mutate(group=cutree(hc, k=k)) %&gt;%
   mutate(group=as.factor(group))
-  
-centroid_tb &lt;- #centroid of groups
+
+head(GPS_points_tb)</code></pre>
+<pre><code>##   sample       Long       Lat group
+## 1     s1  113.75196 -54.89683     1
+## 2     s2   53.01336 -38.67264     2
+## 3     s3 -136.68171  43.58928     3
+## 4     s4   15.76806 -23.55861     2
+## 5     s5 -113.49720  23.14197     3
+## 6     s6   48.88470  13.81575     4</code></pre>
+<pre class="r"><code>centroid_tb &lt;- #centroid of groups
   GPS_points_tb %&gt;%
   group_by(group) %&gt;%
   summarise(mean_long=mean(Long), mean_lat=mean(Lat))</code></pre>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
+<pre class="r"><code>head(centroid_tb)</code></pre>
+<pre><code>## # A tibble: 5 x 3
+##   group mean_long mean_lat
+##   &lt;fct&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1 1         -6.32    -54.4
+## 2 2         12.5     -26.5
+## 3 3        -97.6      35.2
+## 4 4        101.       18.6
+## 5 5         -5.20     57.6</code></pre>
 </div>
 <div id="check-group-centroids" class="section level1">
 <h1>check group centroids</h1>
@@ -453,6 +489,16 @@ cen_plot</code></pre>
   ungroup()</code></pre>
 <pre><code>## Joining, by = &quot;sample&quot;</code></pre>
 <pre><code>## `summarise()` regrouping output by &#39;group&#39; (override with `.groups` argument)</code></pre>
+<pre class="r"><code>head(cluster_sum)</code></pre>
+<pre><code>## # A tibble: 6 x 3
+##   group status         n
+##   &lt;fct&gt; &lt;chr&gt;      &lt;int&gt;
+## 1 1     complete       3
+## 2 1     incomplete     8
+## 3 2     complete       6
+## 4 2     incomplete     7
+## 5 3     complete       8
+## 6 3     incomplete     2</code></pre>
 <pre class="r"><code>cluster_sum_wide &lt;-
   cluster_sum %&gt;%
   pivot_wider(values_from=`n`, names_from = status, values_fill=0) %&gt;%
@@ -460,6 +506,16 @@ cen_plot</code></pre>
   mutate(total=sum(c_across(-group))) %&gt;%
   left_join(centroid_tb)</code></pre>
 <pre><code>## Joining, by = &quot;group&quot;</code></pre>
+<pre class="r"><code>head(cluster_sum_wide)</code></pre>
+<pre><code>## # A tibble: 5 x 6
+## # Rowwise: 
+##   group complete incomplete total mean_long mean_lat
+##   &lt;fct&gt;    &lt;int&gt;      &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1 1            3          8    11     -6.32    -54.4
+## 2 2            6          7    13     12.5     -26.5
+## 3 3            8          2    10    -97.6      35.2
+## 4 4            8          2    10    101.       18.6
+## 5 5            3          3     6     -5.20     57.6</code></pre>
 </div>
 <div id="circle-plot" class="section level1">
 <h1>circle plot</h1>
