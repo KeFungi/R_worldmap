@@ -1,0 +1,126 @@
+---
+title: "R Worldmap"
+author: "Yi-Hong Ke"
+date: "3/23/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(scatterpie)
+library(geosphere)
+```
+
+# input
+```{r}
+set.seed(2022)
+
+data_tb <-  #fake data
+  tibble(sample=paste0("s", 1:50), Long=runif(50, -180, 180), Lat=runif(50, -90, 90), status=sample(c("complete", "incomplete"), 50, TRUE))
+
+mapWorld <-  #world map, x-cordinate=longitude, y-cordinate=latitude
+  borders("world", colour="gray80", fill="gray80")
+```
+
+# check points
+```{r}
+ggplot(data_tb) +
+  mapWorld +
+  geom_point(aes(x=Long, y=Lat), color="red") +
+  coord_quickmap()
+```
+
+# cluster
+```{r}
+k=5 #arbitary groups number
+
+GPS_points <- #all points
+  data_tb %>%
+  column_to_rownames("sample") %>%
+  select(Long, Lat)
+
+mdist <- #distance matrix of points
+  distm(GPS_points)
+
+hc <- #hierachial clustering
+  hclust(as.dist(mdist))
+
+GPS_points_tb <- #assign points to groups
+  GPS_points %>%
+  rownames_to_column("sample") %>%
+  mutate(group=cutree(hc, k=k)) %>%
+  mutate(group=as.factor(group))
+  
+centroid_tb <- #centroid of groups
+  GPS_points_tb %>%
+  group_by(group) %>%
+  summarise(mean_long=mean(Long), mean_lat=mean(Lat))
+```
+
+# check group centroids
+```{r}
+cen_plot <-
+  ggplot(centroid_tb) +
+  mapWorld +
+  geom_point(aes(x=mean_long, y=mean_lat), color="red") +
+  coord_quickmap()
+
+cen_plot
+```
+
+# link data with groups
+```{r}
+cluster_sum <-
+  GPS_points_tb %>%
+  left_join(select(data_tb, sample, status)) %>%
+  group_by(group, status) %>%
+  summarise(n=n()) %>%
+  ungroup()
+
+cluster_sum_wide <-
+  cluster_sum %>%
+  pivot_wider(values_from=`n`, names_from = status, values_fill=0) %>%
+  rowwise() %>%
+  mutate(total=sum(c_across(-group))) %>%
+  left_join(centroid_tb)
+```
+
+# circle plot
+```{r}
+circle_plot <-
+  ggplot(cluster_sum_wide) +
+  mapWorld +
+  geom_point(
+    aes(x=mean_long,
+        y=mean_lat,
+        size=total
+    )
+  ) +
+  coord_quickmap()
+
+circle_plot
+```
+
+# pie plot
+```{r}
+pie_plot <-
+  ggplot(cluster_sum_wide) +
+  mapWorld +
+  geom_scatterpie(
+    aes(x=mean_long,
+        y=mean_lat,
+        r=total),
+        alpha=0.8,
+        data=cluster_sum_wide,
+        cols=c("complete", "incomplete")) +
+  geom_scatterpie_legend(radius = c(1,10,20), x=-160, y=-55) +
+  coord_quickmap()
+
+pie_plot
+```
